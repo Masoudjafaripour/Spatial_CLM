@@ -1,0 +1,11 @@
+torch
+transformers>=5.0
+accelerate
+huggingface_hub
+pyarrow
+numpy
+opencv-python-headless
+matplotlib
+torchvision
+flash-linear-attention
+peft
