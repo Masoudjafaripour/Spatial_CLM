@@ -122,6 +122,11 @@ class BasePolicy:
         self.model = model
         self.model.eval()
         self.max_new_tokens = max_new_tokens
+        # Qwen3.5-0.8B ships no generation_config.json, so generate() stops only at
+        # <|endoftext|>. Also stop at <|im_end|> (end of the assistant turn): the
+        # LoRA-SFT model is trained to end with it and never emits <|endoftext|>.
+        tok = self.processor.tokenizer
+        self.stop_ids = [tok.convert_tokens_to_ids("<|im_end|>"), tok.convert_tokens_to_ids("<|endoftext|>")]
 
     @torch.no_grad()
     def act(self, sample, video):
@@ -137,7 +142,11 @@ class BasePolicy:
             do_sample_frames=False,
         ).to(DEVICE)
         out = self.model.generate(
-            **batch, max_new_tokens=self.max_new_tokens, do_sample=False
+            **batch,
+            max_new_tokens=self.max_new_tokens,
+            do_sample=False,
+            eos_token_id=self.stop_ids,
+            pad_token_id=self.stop_ids[1],
         )
         sync()
         latency = time.perf_counter() - t0
